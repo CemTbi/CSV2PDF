@@ -9,13 +9,13 @@ import java.awt.CardLayout;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.io.File;
-
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.Collections;
 import java.util.List;
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.JComponent;
 import javax.swing.JFileChooser;
+import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.TransferHandler;
 import javax.swing.UIManager;
@@ -26,7 +26,7 @@ import javax.swing.table.DefaultTableModel;
  *
  * @author Cem
  */
-public class GUI extends javax.swing.JFrame {
+public class GUI extends JFrame {
 
     private CSV2PDF service;
     private List<String[]> data;
@@ -53,28 +53,27 @@ public class GUI extends javax.swing.JFrame {
             jComboBoxFontName.addItem("Courier");
             jComboBoxFontName.addItem("Courier Bold");
             
-            jPanel3.setTransferHandler(new TransferHandler() {
-    @Override
-    public boolean canImport(TransferSupport support) {
-        return support.isDataFlavorSupported(DataFlavor.javaFileListFlavor);
-    }
-
-    @Override
-    public boolean importData(TransferSupport support) {
-        if (!canImport(support)) return false;
-        try {
-            Transferable t = support.getTransferable();
-            List<File> files = (List<File>) t.getTransferData(DataFlavor.javaFileListFlavor);
-            String pathName = files.get(0).getAbsolutePath();
-            System.out.println("Dropped on panel: " + pathName);
-            jTextFieldFilename.setText(pathName);
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
+        
+    ((JComponent) getContentPane()).setTransferHandler(new TransferHandler() {
+        @Override
+        public boolean canImport(TransferSupport support) {
+            return support.isDataFlavorSupported(DataFlavor.javaFileListFlavor);
         }
-    }
-});
+
+        @Override
+        public boolean importData(TransferSupport support) {
+            if (!canImport(support)) return false;
+            try {
+                Transferable t = support.getTransferable();
+                List<File> files = (List<File>) t.getTransferData(DataFlavor.javaFileListFlavor);
+                jTextFieldFilename.setText(files.get(0).getAbsolutePath());
+                return true;
+            } catch (Exception e) {
+                e.printStackTrace();
+                return false;
+            }
+        }
+    });
     }
 
     /**
@@ -418,6 +417,7 @@ public class GUI extends javax.swing.JFrame {
 
         jPanel10.setLayout(new java.awt.CardLayout());
 
+        jLabel9.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
         jLabel9.setText("Select CSV to see preview");
         jLabel9.setFocusable(false);
         jPanel10.add(jLabel9, "card1");
@@ -492,7 +492,7 @@ public class GUI extends javax.swing.JFrame {
 
         // Beispiel-Konfiguration
         CSV2PDF.PDFConfig config = new CSV2PDF.PDFConfig();
-        config.csvPath = Paths.get(path); // Ersetze durch deinen CSV-Pfad
+        config.csvPath = Paths.get(jTextFieldFilename.getText()); // Ersetze durch deinen CSV-Pfad
         config.pdfOutputPath = Paths.get("C:/Users/Cem/Desktop/test.pdf"); // Zielpfad für PDF
         
         // Delimeter

@@ -493,6 +493,7 @@
           <SubComponents>
             <Component class="javax.swing.JLabel" name="jLabel9">
               <Properties>
+                <Property name="horizontalAlignment" type="int" value="0"/>
                 <Property name="text" type="java.lang.String" value="Select CSV to see preview"/>
                 <Property name="focusable" type="boolean" value="false"/>
               </Properties>
