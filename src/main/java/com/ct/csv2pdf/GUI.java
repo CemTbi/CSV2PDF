@@ -5,13 +5,21 @@
 package com.ct.csv2pdf;
 
 import com.opencsv.exceptions.CsvValidationException;
+import java.awt.CardLayout;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.io.File;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.List;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
+import javax.swing.TransferHandler;
 import javax.swing.UIManager;
+import javax.swing.table.DefaultTableModel;
 
    
 /**
@@ -20,8 +28,11 @@ import javax.swing.UIManager;
  */
 public class GUI extends javax.swing.JFrame {
 
-    CSV2PDF service;
-    String path;
+    private CSV2PDF service;
+    private List<String[]> data;
+    private String path;
+    private DefaultTableModel tableModel = new DefaultTableModel();
+    
     /**
      * Creates new form GUI
      */
@@ -33,7 +44,6 @@ public class GUI extends javax.swing.JFrame {
         model.addElement(new ComboItem("Semicolon ( ; )", ";"));
         model.addElement(new ComboItem("Tab", "\t"));
         model.addElement(new ComboItem("Space", " "));
-        
         jComboBoxDelimeter.setModel(model);
        
         jComboBoxFontName.removeAllItems();
@@ -42,7 +52,29 @@ public class GUI extends javax.swing.JFrame {
             jComboBoxFontName.addItem("Times Roman");
             jComboBoxFontName.addItem("Courier");
             jComboBoxFontName.addItem("Courier Bold");
-                 
+            
+            jPanel3.setTransferHandler(new TransferHandler() {
+    @Override
+    public boolean canImport(TransferSupport support) {
+        return support.isDataFlavorSupported(DataFlavor.javaFileListFlavor);
+    }
+
+    @Override
+    public boolean importData(TransferSupport support) {
+        if (!canImport(support)) return false;
+        try {
+            Transferable t = support.getTransferable();
+            List<File> files = (List<File>) t.getTransferData(DataFlavor.javaFileListFlavor);
+            String pathName = files.get(0).getAbsolutePath();
+            System.out.println("Dropped on panel: " + pathName);
+            jTextFieldFilename.setText(pathName);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+});
     }
 
     /**
@@ -57,7 +89,6 @@ public class GUI extends javax.swing.JFrame {
 
         buttonGroup1 = new javax.swing.ButtonGroup();
         buttonGroup2 = new javax.swing.ButtonGroup();
-        jButtonConvert = new javax.swing.JButton();
         jPanel3 = new javax.swing.JPanel();
         jPanel1 = new javax.swing.JPanel();
         jTextFieldFilename = new javax.swing.JTextField();
@@ -88,28 +119,17 @@ public class GUI extends javax.swing.JFrame {
         jLabel8 = new javax.swing.JLabel();
         jCheckBoxThr = new javax.swing.JCheckBox();
         jPanel9 = new javax.swing.JPanel();
-        jTabbedPane1 = new javax.swing.JTabbedPane();
+        jPanel10 = new javax.swing.JPanel();
+        jLabel9 = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
         jTable1 = new javax.swing.JTable();
+        jPanel11 = new javax.swing.JPanel();
+        jButtonConvert = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setMinimumSize(new java.awt.Dimension(570, 360));
-        setPreferredSize(new java.awt.Dimension(570, 360));
+        setMinimumSize(new java.awt.Dimension(560, 506));
+        setPreferredSize(new java.awt.Dimension(560, 506));
         getContentPane().setLayout(new java.awt.GridBagLayout());
-
-        jButtonConvert.setText("Convert");
-        jButtonConvert.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButtonConvertActionPerformed(evt);
-            }
-        });
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 3;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.VERTICAL;
-        gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_END;
-        gridBagConstraints.insets = new java.awt.Insets(0, 0, 0, 7);
-        getContentPane().add(jButtonConvert, gridBagConstraints);
 
         jPanel3.setBorder(javax.swing.BorderFactory.createTitledBorder("Import"));
         jPanel3.setLayout(new java.awt.GridBagLayout());
@@ -221,7 +241,7 @@ public class GUI extends javax.swing.JFrame {
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.FIRST_LINE_START;
         gridBagConstraints.weightx = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(0, 5, 0, 5);
+        gridBagConstraints.insets = new java.awt.Insets(5, 5, 0, 5);
         getContentPane().add(jPanel3, gridBagConstraints);
 
         jPanel5.setBorder(javax.swing.BorderFactory.createTitledBorder("Layout Options"));
@@ -267,7 +287,7 @@ public class GUI extends javax.swing.JFrame {
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 0;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.VERTICAL;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_START;
         gridBagConstraints.weightx = 1.0;
         gridBagConstraints.insets = new java.awt.Insets(10, 10, 10, 10);
@@ -282,8 +302,8 @@ public class GUI extends javax.swing.JFrame {
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 0;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_START;
+        gridBagConstraints.weightx = 1.0;
         gridBagConstraints.insets = new java.awt.Insets(0, 0, 10, 0);
         jPanel6.add(jComboBoxFontName, gridBagConstraints);
 
@@ -292,6 +312,7 @@ public class GUI extends javax.swing.JFrame {
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 0;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_START;
+        gridBagConstraints.weightx = 1.0;
         gridBagConstraints.insets = new java.awt.Insets(0, 0, 10, 10);
         jPanel6.add(jLabel5, gridBagConstraints);
 
@@ -300,6 +321,7 @@ public class GUI extends javax.swing.JFrame {
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 1;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_START;
+        gridBagConstraints.weightx = 1.0;
         jPanel6.add(jLabel6, gridBagConstraints);
 
         jSpinnerFontSize.setModel(new javax.swing.SpinnerNumberModel(12, 8, 72, 1));
@@ -308,14 +330,14 @@ public class GUI extends javax.swing.JFrame {
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 1;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_START;
+        gridBagConstraints.weightx = 1.0;
         jPanel6.add(jSpinnerFontSize, gridBagConstraints);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 2;
         gridBagConstraints.gridy = 0;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.VERTICAL;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_END;
         gridBagConstraints.weightx = 1.0;
         gridBagConstraints.insets = new java.awt.Insets(10, 10, 10, 10);
@@ -357,7 +379,8 @@ public class GUI extends javax.swing.JFrame {
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 1;
         gridBagConstraints.gridy = 0;
-        gridBagConstraints.fill = java.awt.GridBagConstraints.VERTICAL;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
+        gridBagConstraints.weightx = 1.0;
         gridBagConstraints.insets = new java.awt.Insets(10, 10, 10, 10);
         jPanel5.add(jPanel7, gridBagConstraints);
 
@@ -390,24 +413,28 @@ public class GUI extends javax.swing.JFrame {
         gridBagConstraints.insets = new java.awt.Insets(0, 5, 0, 5);
         getContentPane().add(jPanel5, gridBagConstraints);
 
+        jPanel9.setBorder(javax.swing.BorderFactory.createTitledBorder("CSV Preview"));
         jPanel9.setLayout(new java.awt.GridBagLayout());
 
-        jTable1.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null}
-            },
-            new String [] {
-                "Title 1", "Title 2", "Title 3", "Title 4"
-            }
-        ));
+        jPanel10.setLayout(new java.awt.CardLayout());
+
+        jLabel9.setText("Select CSV to see preview");
+        jLabel9.setFocusable(false);
+        jPanel10.add(jLabel9, "card1");
+
+        jScrollPane1.setMinimumSize(new java.awt.Dimension(452, 150));
+        jScrollPane1.setPreferredSize(new java.awt.Dimension(452, 150));
+
+        jTable1.setModel(tableModel);
         jScrollPane1.setViewportView(jTable1);
 
-        jTabbedPane1.addTab("tab1", jScrollPane1);
+        jPanel10.add(jScrollPane1, "card2");
 
-        jPanel9.add(jTabbedPane1, new java.awt.GridBagConstraints());
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.fill = java.awt.GridBagConstraints.BOTH;
+        gridBagConstraints.weightx = 1.0;
+        gridBagConstraints.weighty = 1.0;
+        jPanel9.add(jPanel10, gridBagConstraints);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
@@ -417,6 +444,32 @@ public class GUI extends javax.swing.JFrame {
         gridBagConstraints.weightx = 1.0;
         gridBagConstraints.insets = new java.awt.Insets(0, 5, 0, 5);
         getContentPane().add(jPanel9, gridBagConstraints);
+
+        jPanel11.setLayout(new java.awt.GridBagLayout());
+
+        jButtonConvert.setText("Convert");
+        jButtonConvert.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButtonConvertActionPerformed(evt);
+            }
+        });
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 0;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.VERTICAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_END;
+        gridBagConstraints.weightx = 1.0;
+        gridBagConstraints.insets = new java.awt.Insets(0, 0, 0, 3);
+        jPanel11.add(jButtonConvert, gridBagConstraints);
+
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 3;
+        gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.FIRST_LINE_START;
+        gridBagConstraints.weightx = 1.0;
+        gridBagConstraints.insets = new java.awt.Insets(0, 5, 5, 5);
+        getContentPane().add(jPanel11, gridBagConstraints);
 
         pack();
         setLocationRelativeTo(null);
@@ -435,6 +488,7 @@ public class GUI extends javax.swing.JFrame {
 
     private void jButtonConvertActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonConvertActionPerformed
         service = new CSV2PDF();
+        
 
         // Beispiel-Konfiguration
         CSV2PDF.PDFConfig config = new CSV2PDF.PDFConfig();
@@ -451,17 +505,55 @@ public class GUI extends javax.swing.JFrame {
         config.fontSize = (int) jSpinnerFontSize.getValue();
         System.out.println(config.fontSize);
          //config.selectedRows.add(0); // Optional: Nur bestimmte Zeilen
+         
+        
 
         try {
             if(config.csvPath != null) {
-                service.convert(config);          
-            JOptionPane.showMessageDialog(this, "PDF wurde erfolgreich erstellt.");
+                service.convert(config);  
+                data = service.getData();
+                insertCsv();
+                JOptionPane.showMessageDialog(this, "PDF wurde erfolgreich erstellt.");
             } else {
                 JOptionPane.showMessageDialog(this, "Pfad nicht gefunden.");
             }
         } catch (CsvValidationException | IOException e) {}
     }//GEN-LAST:event_jButtonConvertActionPerformed
 
+    private void insertCsv() {
+        tableModel = new DefaultTableModel() {
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                return columnIndex == 0 ? Boolean.class : String.class;
+            }
+
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return column == 0; // Only checkbox editable
+            }
+        };
+        jTable1.setModel(tableModel);
+
+        String[] headers = data.get(0);
+        String[] headersWithCheckbox = new String[headers.length + 1];
+        headersWithCheckbox[0] = "Select";
+        System.arraycopy(headers, 0, headersWithCheckbox, 1, headers.length);
+        tableModel.setColumnIdentifiers(headersWithCheckbox);
+
+        for (int i = 1; i < data.size(); i++) {
+            String[] row = data.get(i);
+            Object[] newRow = new Object[row.length + 1];
+            newRow[0] = true; // Default: checkbox selected
+            System.arraycopy(row, 0, newRow, 1, row.length);
+            tableModel.addRow(newRow);
+        }
+
+        
+        CardLayout layout = (CardLayout) jPanel10.getLayout();
+        layout.show(jPanel10, "card2");
+        
+    }
+    
     private void jRadioButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jRadioButton2ActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_jRadioButton2ActionPerformed
@@ -528,7 +620,10 @@ public class GUI extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
     private javax.swing.JLabel jLabel8;
+    private javax.swing.JLabel jLabel9;
     private javax.swing.JPanel jPanel1;
+    private javax.swing.JPanel jPanel10;
+    private javax.swing.JPanel jPanel11;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JPanel jPanel3;
     private javax.swing.JPanel jPanel4;
@@ -544,7 +639,6 @@ public class GUI extends javax.swing.JFrame {
     private javax.swing.JRadioButton jRadioButton5;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JSpinner jSpinnerFontSize;
-    private javax.swing.JTabbedPane jTabbedPane1;
     private javax.swing.JTable jTable1;
     private javax.swing.JTextField jTextFieldFilename;
     private javax.swing.JTextField jTextFieldOther;
