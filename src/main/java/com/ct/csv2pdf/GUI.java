@@ -134,8 +134,9 @@ public class GUI extends JFrame {
         jButtonConvert = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setMinimumSize(new java.awt.Dimension(560, 506));
-        setPreferredSize(new java.awt.Dimension(560, 506));
+        setMaximumSize(new java.awt.Dimension(2147483647, 510));
+        setMinimumSize(new java.awt.Dimension(560, 510));
+        setPreferredSize(new java.awt.Dimension(560, 510));
         getContentPane().setLayout(new java.awt.GridBagLayout());
 
         jPanel3.setBorder(javax.swing.BorderFactory.createTitledBorder("Import"));
@@ -255,6 +256,7 @@ public class GUI extends JFrame {
         jPanel5.setLayout(new java.awt.GridBagLayout());
 
         jPanel4.setBorder(javax.swing.BorderFactory.createTitledBorder("PDF Layout"));
+        jPanel4.setToolTipText("");
         jPanel4.setMinimumSize(new java.awt.Dimension(122, 86));
         jPanel4.setPreferredSize(new java.awt.Dimension(122, 86));
         jPanel4.setLayout(new java.awt.GridBagLayout());
