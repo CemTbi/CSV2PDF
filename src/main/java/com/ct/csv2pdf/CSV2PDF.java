@@ -41,11 +41,14 @@ public class CSV2PDF {
     public static class PDFConfig {
         public String delimiter = ",";
         public String fontName = "HELVETICA";
-        public int fontSize = 12;
+        public int fontSize = 11;
         public Path csvPath;
         public Path pdfOutputPath;
         public List<Integer> selectedRows = new ArrayList<>();
-        public String layout = "tabular"; // or "tabular", "list", "tabs".
+        public String layout = "tabs"; // or "tabular", "list", "tabs".
+        public boolean isCentered = false;
+        public boolean thr = false;
+        public boolean isLandscape = false;
     }
 
     /**
@@ -55,6 +58,7 @@ public class CSV2PDF {
      * @throws java.io.IOException
      * @throws com.opencsv.exceptions.CsvValidationException
      */
+    
     public List<String[]> loadCSV(PDFConfig config) throws IOException, CsvValidationException {
     List<String[]> data = new ArrayList<>();
 
@@ -74,7 +78,6 @@ public class CSV2PDF {
     return data;
 }
 
-
     /**
      * Filters the selected rows based on user input.
      * @param allRows
@@ -91,6 +94,13 @@ public class CSV2PDF {
         }
         return filtered;
     }
+    
+    private PDPage isLandscape(PDFConfig config) {
+        return config.isLandscape
+                ? new PDPage(new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth()))
+                : new PDPage(PDRectangle.A4);
+    }
+
 
     /**
      * Generates a PDF file from the given CSV data and configuration.
@@ -98,285 +108,145 @@ public class CSV2PDF {
      * @param config
      * @throws java.io.IOException
      */
+    
     public void generatePDF(List<String[]> data, PDFConfig config) throws IOException {
-        try (PDDocument document = new PDDocument()) {
-            PDPage page = new PDPage(PDRectangle.A4);
-            document.addPage(page);
-            try (PDPageContentStream content = new PDPageContentStream(document, page)) {
+            try (PDDocument document = new PDDocument()) {
                 PDType1Font font = resolveFont(config.fontName);
-                content.setFont(font, config.fontSize);
-                
-                switch (config.layout.toLowerCase()) {
-                    case "tabular" -> generateTabularLayout3(document,content, data, font, config.fontSize);
-                    case "tabs" -> generateTabsLayout(content, data, font, config.fontSize);
-                    default -> throw new IllegalArgumentException("Unsupported layout: " + config.layout);
-                }
+
+            switch (config.layout.toLowerCase()) {
+                case "tabs" -> generateTabsLayout(document, data, config, font);
+                default -> throw new IllegalArgumentException("Unsupported layout: " + config.layout);
             }
+            
             document.save(config.pdfOutputPath.toFile());
         }
     }
-    
-     /**
-     * Tabular layout rendering like in Excel.
-     */
-        private void generateTabularLayout(PDPageContentStream content, List<String[]> data, PDType1Font font, int fontSize) throws IOException {
+        
+    private void generateTabsLayout(PDDocument document, List<String[]> data, PDFConfig config, PDType1Font font) throws IOException {
         float margin = 50;
-        float yStart = PDRectangle.A4.getHeight() - margin;
-        float y = yStart;
+        int fontSize = config.fontSize;
         float lineHeight = fontSize + 6;
-        float x = margin;
-        float tableWidth = PDRectangle.A4.getWidth() - 2 * margin;
-        int columns = data.get(0).length;
-        float cellWidth = tableWidth / columns;
 
-        for (String[] line : data) {
-            for (int i = 0; i < line.length; i++) {
-                float cellX = x + i * cellWidth;
-                content.setFont(font, fontSize); // Set font here
-                content.beginText();
-                content.newLineAtOffset(cellX, y);
-                content.showText(line[i]);
-                content.endText();
+        List<List<String>> rows = new ArrayList<>();
+        for (String[] row : data) {
+            rows.add(Arrays.asList(row));
+        }
+
+        int columnCount = rows.get(0).size();
+        float[] columnWidths = new float[columnCount];
+
+        // Temporary page to measure width based on orientation
+        PDPage tempPage = isLandscape(config);
+        float pageWidth = tempPage.getMediaBox().getWidth();
+        float pageHeight = tempPage.getMediaBox().getHeight();
+        float usableWidth = pageWidth - 2 * margin;
+        float usableHeight = pageHeight - 2 * margin;
+        float yStart = pageHeight - margin;
+
+        // Measure column widths
+        for (int col = 0; col < columnCount; col++) {
+            float maxWidth = 0;
+            for (List<String> row : rows) {
+                if (col < row.size()) {
+                    float textWidth = font.getStringWidth(row.get(col)) / 1000 * fontSize + 10;
+                    maxWidth = Math.max(maxWidth, textWidth);
+                }
             }
-            y -= lineHeight;
+            columnWidths[col] = maxWidth;
         }
-    }
-        
-    private void generateTabularLayout2(PDDocument document,PDPageContentStream content, List<String[]> data, PDType1Font font, int fontSize) throws IOException {
-    float margin = 50;
-    float pageWidth = PDRectangle.A4.getWidth();
-    float pageHeight = PDRectangle.A4.getHeight();
-    float usableHeight = pageHeight - 2 * margin;
-    float usableWidth = pageWidth - 2 * margin;
-    float yStart = pageHeight - margin;
-    float lineHeight = fontSize + 6;
-    float xStart = margin;
 
-    List<List<String>> rows = new ArrayList<>();
-    for (String[] row : data) {
-        rows.add(Arrays.asList(row));
-    }
+        int startColumn = 0;
+       PDPageContentStream content = null;
 
-    int columnCount = rows.get(0).size();
+        try {
+            while (startColumn < columnCount) {
+                float usedWidth = 0;
+                int endColumn = startColumn;
 
-    // Schritt 1: Berechne die nötige Breite für jede Spalte
-    float[] columnWidths = new float[columnCount];
-    for (int col = 0; col < columnCount; col++) {
-        float maxWidth = 0;
-        for (List<String> row : rows) {
-            if (col < row.size()) {
-                String cell = row.get(col);
-                float textWidth = font.getStringWidth(cell) / 1000 * fontSize + 10; // 10 Puffer
-                maxWidth = Math.max(maxWidth, textWidth);
-            }
-        }
-        columnWidths[col] = maxWidth;
-    }
+                while (endColumn < columnCount && usedWidth + columnWidths[endColumn] <= usableWidth) {
+                    usedWidth += columnWidths[endColumn];
+                    endColumn++;
+                }
 
-    int startColumn = 0;
-    while (startColumn < columnCount) {
-        float currentX = xStart;
-        float usedWidth = 0;
-        int endColumn = startColumn;
+                float xStart = config.isCentered ? margin + (usableWidth - usedWidth) / 2 : margin;
 
-        // Berechne, welche Spalten auf die aktuelle Seite passen
-        while (endColumn < columnCount && usedWidth + columnWidths[endColumn] <= usableWidth) {
-            usedWidth += columnWidths[endColumn];
-            endColumn++;
-        }
-        
-        // Automatisches Zentrieren in der Mitte
-        //xStart = margin + (usableWidth - usedWidth) / 2;
-
-        float y = yStart;
-        float usedHeight = 0;
-        
-        // >>> HEADER einmal zu Beginn jeder Spalten-Seite zeichnen <<<
-        y = drawHeader(content, data.get(0), startColumn, endColumn, columnWidths, xStart, y, fontSize, lineHeight, font);
-        usedHeight += lineHeight;
-
-        for (int rowIndex = 1; rowIndex < rows.size(); rowIndex++) { // Start bei 1, da 0 Header ist
-            List<String> row = rows.get(rowIndex);
-
-            // Seitenumbruch bei zu wenig Platz für nächste Zeile + Header
-            if (usedHeight + lineHeight > usableHeight) {
-                content.close();
-                PDPage newPage = new PDPage(PDRectangle.A4);
-                document.addPage(newPage);
-                content = new PDPageContentStream(document, newPage);
+                PDPage page = isLandscape(config);
+                document.addPage(page);
+                content = new PDPageContentStream(document, page);
                 content.setFont(font, fontSize);
 
-                y = yStart;
-                usedHeight = 0;
+                float y = yStart;
+                float usedHeight = 0;
 
-                // >>> HEADER auf neuer Seite wiederholen <<<
+                
                 y = drawHeader(content, data.get(0), startColumn, endColumn, columnWidths, xStart, y, fontSize, lineHeight, font);
                 usedHeight += lineHeight;
-            }
+                
 
-            float x = xStart;
-            for (int col = startColumn; col < endColumn; col++) {
-                if (col < row.size()) {
-                    String cell = row.get(col);
-                    content.beginText();
-                    content.newLineAtOffset(x, y);
-                    content.showText(cell);
-                    content.endText();
-                    x += columnWidths[col];
+                for (int rowIndex = 1; rowIndex < rows.size(); rowIndex++) {
+                    List<String> row = rows.get(rowIndex);
+
+                    if (usedHeight + lineHeight > usableHeight) {
+                        content.close(); // close old stream
+                        page = isLandscape(config);
+                        document.addPage(page);
+                        content = new PDPageContentStream(document, page);
+                        content.setFont(font, fontSize);
+
+                        y = yStart;
+                        usedHeight = 0;
+
+                        if (config.thr) {
+                            y = drawHeader(content, data.get(0), startColumn, endColumn, columnWidths, xStart, y, fontSize, lineHeight, font);
+                            usedHeight += lineHeight;
+                        }
+                    }
+
+                    float x = xStart;
+                    for (int col = startColumn; col < endColumn; col++) {
+                        if (col < row.size()) {
+                            String cell = row.get(col);
+                            content.beginText();
+                            content.newLineAtOffset(x, y);
+                            content.showText(cell);
+                            content.endText();
+                            x += columnWidths[col];
+                        }
+                    }
+
+                    y -= lineHeight;
+                    usedHeight += lineHeight;
                 }
+
+                content.close();
+                startColumn = endColumn;
             }
-
-            y -= lineHeight;
-            usedHeight += lineHeight;
-        }
-
-        content.close();
-        startColumn = endColumn;
-
-        // Nur wenn noch Spalten übrig sind, eine neue Seite starten
-        if (startColumn < columnCount) {
-            PDPage nextPage = new PDPage(PDRectangle.A4);
-            document.addPage(nextPage);
-            content = new PDPageContentStream(document, nextPage);
-            content.setFont(font, fontSize);
+        } finally {
+            if (content != null) {
+                content.close(); // Ensure it's closed if not already
+            }
         }
     }
-    }
-    
-    
+
     
     // --- Neuer Hilfsmethode: Überschriften zeichnen ---
-private float drawHeader(PDPageContentStream content, String[] headerRow, int startColumn, int endColumn,
-                         float[] columnWidths, float xStart, float y, int fontSize, float lineHeight, PDType1Font font) throws IOException {
-    float x = xStart;
-    content.setFont(font, fontSize); // Fetter Header
-    for (int col = startColumn; col < endColumn; col++) {
-        if (col < headerRow.length) {
-            String cell = headerRow[col];
-            content.beginText();
-            content.newLineAtOffset(x, y);
-            content.showText(cell);
-            content.endText();
-            x += columnWidths[col];
-        }
-    }
-    content.setFont(font, fontSize); // Normale Schrift zurücksetzen
-    return y - lineHeight; // y für nächste Zeile zurückgeben
-}
-
-private void generateTabularLayout3(PDDocument document, PDPageContentStream content, List<String[]> data,
-                                   PDType1Font font, int fontSize) throws IOException {
-    float margin = 50;
-    float pageWidth = PDRectangle.A4.getWidth();
-    float pageHeight = PDRectangle.A4.getHeight();
-    float usableHeight = pageHeight - 2 * margin;
-    float usableWidth = pageWidth - 2 * margin;
-    float yStart = pageHeight - margin;
-    float lineHeight = fontSize + 6;
-    float xStart = margin;
-
-    List<List<String>> rows = new ArrayList<>();
-    for (String[] row : data) {
-        rows.add(Arrays.asList(row));
-    }
-
-    int columnCount = rows.get(0).size();
-
-    // Schritt 1: Berechne die nötige Breite für jede Spalte
-    float[] columnWidths = new float[columnCount];
-    for (int col = 0; col < columnCount; col++) {
-        float maxWidth = 0;
-        for (List<String> row : rows) {
-            if (col < row.size()) {
-                String cell = row.get(col);
-                float textWidth = font.getStringWidth(cell) / 1000 * fontSize + 10; // 10 Puffer
-                maxWidth = Math.max(maxWidth, textWidth);
+    private float drawHeader(PDPageContentStream content, String[] headerRow, int startColumn, int endColumn,
+                             float[] columnWidths, float xStart, float y, int fontSize, float lineHeight, PDType1Font font) throws IOException {
+        float x = xStart;
+        content.setFont(font, fontSize); // Fetter Header
+        for (int col = startColumn; col < endColumn; col++) {
+            if (col < headerRow.length) {
+                String cell = headerRow[col];
+                content.beginText();
+                content.newLineAtOffset(x, y);
+                content.showText(cell);
+                content.endText();
+                x += columnWidths[col];
             }
         }
-        columnWidths[col] = maxWidth;
+        content.setFont(font, fontSize); // Normale Schrift zurücksetzen
+        return y - lineHeight; // y für nächste Zeile zurückgeben
     }
-
-    int startColumn = 0;
-    while (startColumn < columnCount) {
-        float usedWidth = 0;
-        int endColumn = startColumn;
-
-        // Berechne, welche Spalten auf die aktuelle Seite passen
-        while (endColumn < columnCount && usedWidth + columnWidths[endColumn] <= usableWidth) {
-            usedWidth += columnWidths[endColumn];
-            endColumn++;
-        }
-
-        // >>> Hier neu: Berechne xStart dynamisch, um Tabelle zu zentrieren <<<
-       // xStart = margin + (usableWidth - usedWidth) / 2;
-
-        float y = yStart;
-        float usedHeight = 0;
-
-        for (List<String> row : rows) {
-            // Seitenumbruch (Höhe)
-            if (usedHeight + lineHeight > usableHeight) {
-                content.close();
-                PDPage newPage = new PDPage(PDRectangle.A4);
-                document.addPage(newPage);
-                content = new PDPageContentStream(document, newPage);
-                content.setFont(font, fontSize);
-                y = yStart;
-                usedHeight = 0;
-            }
-
-            float x = xStart;
-            for (int col = startColumn; col < endColumn; col++) {
-                if (col < row.size()) {
-                    String cell = row.get(col);
-                    content.beginText();
-                    content.newLineAtOffset(x, y);
-                    content.showText(cell);
-                    content.endText();
-                    x += columnWidths[col];
-                }
-            }
-
-            y -= lineHeight;
-            usedHeight += lineHeight;
-        }
-
-        content.close();
-        startColumn = endColumn;
-
-        // Nur neue Seite erzeugen, wenn noch Spalten übrig sind
-        if (startColumn < columnCount) {
-            PDPage nextPage = new PDPage(PDRectangle.A4);
-            document.addPage(nextPage);
-            content = new PDPageContentStream(document, nextPage);
-            content.setFont(font, fontSize);
-        }
-    }
-}
-
-
-
-
-    /**
-     * Tabs-separated layout rendering.
-     */
-    private void generateTabsLayout(PDPageContentStream content, List<String[]> data, PDType1Font font, int fontSize) throws IOException {
-        float margin = 50;
-        float y = PDRectangle.A4.getHeight() - margin;
-        float lineHeight = fontSize + 6;
-        float x = margin;
-
-        content.setFont(font, fontSize); // Set font here
-        for (String[] line : data) {
-            String joined = String.join("        ", line);
-            content.beginText();
-            content.newLineAtOffset(x, y);
-            content.showText(joined);
-            content.endText();
-            y -= lineHeight;
-        }
-    }
-
 
     /**
      * Prints the generated PDF file.
@@ -394,7 +264,6 @@ private void generateTabularLayout3(PDDocument document, PDPageContentStream con
         }
     }
 
-
     /**
      * Resolves a font name to a PDFBox font instance.
      */
@@ -411,11 +280,11 @@ private void generateTabularLayout3(PDDocument document, PDPageContentStream con
     /**
      * C
      * @param config
+     * @param allRows
      * @throws java.io.IOException
      * @throws com.opencsv.exceptions.CsvValidationException
      */
-    public void convert(PDFConfig config) throws IOException, CsvValidationException {
-        List<String[]> allRows = loadCSV(config);
+    public void convert(PDFConfig config, List<String[]> allRows) throws IOException, CsvValidationException {
         List<String[]> filtered = filterRows(allRows, config.selectedRows);
         generatePDF(filtered, config);
     }
