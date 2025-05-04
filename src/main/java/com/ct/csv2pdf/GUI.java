@@ -9,9 +9,11 @@ import java.awt.CardLayout;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.print.PrinterException;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -22,6 +24,7 @@ import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.TransferHandler;
 import javax.swing.UIManager;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
 
    
@@ -36,7 +39,7 @@ public class GUI extends JFrame {
     private List<String[]> data;
     private String path;
     private DefaultTableModel tableModel = new DefaultTableModel();
-    
+
     /**
      * Creates new form GUI
      */
@@ -51,12 +54,11 @@ public class GUI extends JFrame {
         jComboBoxDelimeter.setModel(model);
        
         jComboBoxFontName.removeAllItems();
-            jComboBoxFontName.addItem("Helvetica");
-            jComboBoxFontName.addItem("Helvetica Bold");
-            jComboBoxFontName.addItem("Times Roman");
-            jComboBoxFontName.addItem("Courier");
-            jComboBoxFontName.addItem("Courier Bold");
-            
+        jComboBoxFontName.addItem("Helvetica");
+        jComboBoxFontName.addItem("Helvetica Bold");
+        jComboBoxFontName.addItem("Times Roman");
+        jComboBoxFontName.addItem("Courier");
+        jComboBoxFontName.addItem("Courier Bold");  
         
     ((JComponent) getContentPane()).setTransferHandler(new TransferHandler() {
         @Override
@@ -132,6 +134,8 @@ public class GUI extends JFrame {
         jTable1 = new javax.swing.JTable();
         jPanel11 = new javax.swing.JPanel();
         jButtonConvert = new javax.swing.JButton();
+        jButtonSelectAll = new javax.swing.JButton();
+        jButtonPrint = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setMaximumSize(new java.awt.Dimension(2147483647, 510));
@@ -467,13 +471,36 @@ public class GUI extends JFrame {
             }
         });
         gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridx = 2;
         gridBagConstraints.gridy = 0;
         gridBagConstraints.fill = java.awt.GridBagConstraints.VERTICAL;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_END;
-        gridBagConstraints.weightx = 1.0;
         gridBagConstraints.insets = new java.awt.Insets(0, 0, 0, 3);
         jPanel11.add(jButtonConvert, gridBagConstraints);
+
+        jButtonSelectAll.setText("Select all");
+        jButtonSelectAll.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButtonSelectAllActionPerformed(evt);
+            }
+        });
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.gridx = 0;
+        gridBagConstraints.gridy = 0;
+        gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_START;
+        gridBagConstraints.weightx = 1.0;
+        gridBagConstraints.insets = new java.awt.Insets(0, 2, 0, 0);
+        jPanel11.add(jButtonSelectAll, gridBagConstraints);
+
+        jButtonPrint.setText("Print");
+        jButtonPrint.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jButtonPrintActionPerformed(evt);
+            }
+        });
+        gridBagConstraints = new java.awt.GridBagConstraints();
+        gridBagConstraints.insets = new java.awt.Insets(0, 0, 0, 10);
+        jPanel11.add(jButtonPrint, gridBagConstraints);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
@@ -490,6 +517,10 @@ public class GUI extends JFrame {
 
     private void jButtonFileActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonFileActionPerformed
         JFileChooser fileChooser = new JFileChooser();
+        
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("CSV-Dateien (*.csv)", "csv");
+        fileChooser.setFileFilter(filter);
+        
         int response = fileChooser.showOpenDialog(null);
         
         if(response == JFileChooser.APPROVE_OPTION) {
@@ -500,17 +531,18 @@ public class GUI extends JFrame {
             } catch (IOException | CsvValidationException ex) {
                 Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
             }
-            
-            //File file = new File(path);
         }
     }//GEN-LAST:event_jButtonFileActionPerformed
 
     private void jButtonConvertActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonConvertActionPerformed
         
         config.pdfOutputPath = Paths.get("C:/Users/Cem/Desktop/test.pdf"); // Zielpfad für PDF
-        
+
         ComboItem item = (ComboItem) jComboBoxDelimeter.getSelectedItem();
         config.delimiter = jTextFieldOther.getText().isBlank() ? item.getDelimiter() : jTextFieldOther.getText();
+        
+        config.layout = jRadioButtonTabs.isSelected() ? "tabs" : 
+                        (jRadioButtonTabular.isSelected() ? "tabular" : "list");
 
         config.fontName = jComboBoxFontName.getSelectedItem().toString();
         config.fontSize = (int) jSpinnerFontSize.getValue();
@@ -519,6 +551,15 @@ public class GUI extends JFrame {
         config.isCentered = jCheckBoxCentered.isSelected();
         config.thr = jCheckBoxThr.isSelected();
         
+        List<Integer> selectedRows = new ArrayList<>();
+        for(int row = 0; row < jTable1.getRowCount(); row++) {
+            boolean isSelected = (boolean) jTable1.getValueAt(row, 0);
+            if(isSelected) {
+                selectedRows.add(row);
+            }
+        }
+        
+        config.selectedRows = selectedRows;
 
         try {
             if(config.csvPath != null) {
@@ -537,11 +578,9 @@ public class GUI extends JFrame {
         config = new CSV2PDF.PDFConfig();
         config.csvPath = Paths.get(jTextFieldFilename.getText()); // Ersetze durch deinen CSV-Pfad
 
-
         // Delimeter
         ComboItem item = (ComboItem) jComboBoxDelimeter.getSelectedItem();
         config.delimiter = jTextFieldOther.getText().isBlank() ? item.getDelimiter() : jTextFieldOther.getText();
-
     }
     
     private void insertCsv() throws IOException, CsvValidationException {
@@ -575,10 +614,8 @@ public class GUI extends JFrame {
             tableModel.addRow(newRow);
         }
 
-        
         CardLayout layout = (CardLayout) jPanel10.getLayout();
         layout.show(jPanel10, "card2");
-        
     }
     
     private void jRadioButtonTabsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jRadioButtonTabsActionPerformed
@@ -596,6 +633,50 @@ public class GUI extends JFrame {
     private void jRadioButtonHorizontalActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jRadioButtonHorizontalActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_jRadioButtonHorizontalActionPerformed
+
+    private void jButtonSelectAllActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonSelectAllActionPerformed
+        for(int row = 0; row < jTable1.getRowCount(); row++) {
+            boolean isSelected = (boolean) jTable1.getValueAt(row, 0);
+            jTable1.setValueAt(!isSelected, row, 0);
+        }
+    }//GEN-LAST:event_jButtonSelectAllActionPerformed
+
+    private void jButtonPrintActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonPrintActionPerformed
+        config.pdfOutputPath = Paths.get("C:/Users/Cem/Desktop/test.pdf");
+        
+        ComboItem item = (ComboItem) jComboBoxDelimeter.getSelectedItem();
+        config.delimiter = jTextFieldOther.getText().isBlank() ? item.getDelimiter() : jTextFieldOther.getText();       
+        
+        config.fontName = jComboBoxFontName.getSelectedItem().toString();
+        config.fontSize = (int) jSpinnerFontSize.getValue();
+
+        config.isLandscape = jRadioButtonHorizontal.isSelected();
+        config.isCentered = jCheckBoxCentered.isSelected();
+        config.thr = jCheckBoxThr.isSelected();
+        
+        List<Integer> selectedRows = new ArrayList<>();
+        for(int row = 0; row < jTable1.getRowCount(); row++) {
+            boolean isSelected = (boolean) jTable1.getValueAt(row, 0);
+            if(isSelected) {
+                selectedRows.add(row);
+            }
+        }
+        
+        config.selectedRows = selectedRows;
+
+        try {
+            if(config.csvPath != null) {
+                service.convert(config, data);  
+                
+            }
+        } catch (CsvValidationException | IOException e) {}
+        
+        try {
+            service.printPDF(config.pdfOutputPath);
+        } catch (IOException | PrinterException ex) {
+            Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_jButtonPrintActionPerformed
 
     /**
      * @param args the command line arguments
@@ -635,6 +716,8 @@ public class GUI extends JFrame {
     private javax.swing.ButtonGroup buttonGroupPageOrientation;
     private javax.swing.JButton jButtonConvert;
     private javax.swing.JButton jButtonFile;
+    private javax.swing.JButton jButtonPrint;
+    private javax.swing.JButton jButtonSelectAll;
     private javax.swing.JCheckBox jCheckBoxCentered;
     private javax.swing.JCheckBox jCheckBoxThr;
     private javax.swing.JComboBox<ComboItem> jComboBoxDelimeter;
