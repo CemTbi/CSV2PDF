@@ -58,7 +58,6 @@ public class CSV2PDF {
      * @throws java.io.IOException
      * @throws com.opencsv.exceptions.CsvValidationException
      */
-    
     public List<String[]> loadCSV(PDFConfig config) throws IOException, CsvValidationException {
     List<String[]> data = new ArrayList<>();
 
@@ -87,12 +86,29 @@ public class CSV2PDF {
     public List<String[]> filterRows(List<String[]> allRows, List<Integer> selectedIndices) {
         if (selectedIndices == null || selectedIndices.isEmpty()) return allRows;
         List<String[]> filtered = new ArrayList<>();
+        filtered.add(allRows.get(0)); 
         for (int i : selectedIndices) {
             if (i >= 0 && i < allRows.size()) {
-                filtered.add(allRows.get(i));
+                filtered.add(allRows.get(i + 1));
             }
         }
         return filtered;
+    }
+    
+    /**
+     * Generates a PDF file from the given CSV data and configuration.
+     * @param data
+     * @param config
+     * @throws java.io.IOException
+     */
+    public void generatePDF(List<String[]> data, PDFConfig config) throws IOException {
+            try (PDDocument document = new PDDocument()) {
+                PDType1Font font = resolveFont(config.fontName);
+            
+                generateLayout(document, data, config, font);
+            
+                document.save(config.pdfOutputPath.toFile());
+        }
     }
     
     private PDPage isLandscape(PDFConfig config) {
@@ -100,29 +116,8 @@ public class CSV2PDF {
                 ? new PDPage(new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth()))
                 : new PDPage(PDRectangle.A4);
     }
-
-
-    /**
-     * Generates a PDF file from the given CSV data and configuration.
-     * @param data
-     * @param config
-     * @throws java.io.IOException
-     */
-    
-    public void generatePDF(List<String[]> data, PDFConfig config) throws IOException {
-            try (PDDocument document = new PDDocument()) {
-                PDType1Font font = resolveFont(config.fontName);
-
-            switch (config.layout.toLowerCase()) {
-                case "tabs" -> generateTabsLayout(document, data, config, font);
-                default -> throw new IllegalArgumentException("Unsupported layout: " + config.layout);
-            }
-            
-            document.save(config.pdfOutputPath.toFile());
-        }
-    }
         
-    private void generateTabsLayout(PDDocument document, List<String[]> data, PDFConfig config, PDType1Font font) throws IOException {
+    private void generateLayout(PDDocument document, List<String[]> data, PDFConfig config, PDType1Font font) throws IOException {
         float margin = 50;
         int fontSize = config.fontSize;
         float lineHeight = fontSize + 6;
@@ -168,6 +163,7 @@ public class CSV2PDF {
                     endColumn++;
                 }
 
+                // Center PDF
                 float xStart = config.isCentered ? margin + (usableWidth - usedWidth) / 2 : margin;
 
                 PDPage page = isLandscape(config);
@@ -178,9 +174,30 @@ public class CSV2PDF {
                 float y = yStart;
                 float usedHeight = 0;
 
+                if(config.layout.equals("tabs")) {
+                    y = drawHeader(content, data.get(0), startColumn, endColumn, columnWidths, xStart, y, fontSize, lineHeight, font);
+                    usedHeight += lineHeight;
+                } else if(config.layout.equals("tabular")) {
+                    float x = xStart;
+                    for (int col = startColumn; col < endColumn; col++) {
+                        String header = data.get(0)[col];
+                        float cellWidth = columnWidths[col];
+                        float cellHeight = lineHeight;
+
+                        content.addRect(x, y - cellHeight, cellWidth, cellHeight);
+                        content.stroke();
+
+                        content.beginText();
+                        content.newLineAtOffset(x + 2, y - fontSize);
+                        content.showText(header);
+                        content.endText();
+
+                        x += cellWidth;
+                    }
+                    y -= lineHeight;
+                    usedHeight += lineHeight;
+                }
                 
-                y = drawHeader(content, data.get(0), startColumn, endColumn, columnWidths, xStart, y, fontSize, lineHeight, font);
-                usedHeight += lineHeight;
                 
 
                 for (int rowIndex = 1; rowIndex < rows.size(); rowIndex++) {
@@ -197,8 +214,29 @@ public class CSV2PDF {
                         usedHeight = 0;
 
                         if (config.thr) {
-                            y = drawHeader(content, data.get(0), startColumn, endColumn, columnWidths, xStart, y, fontSize, lineHeight, font);
-                            usedHeight += lineHeight;
+                            if(config.layout.equals("tabs")) {
+                               y = drawHeader(content, data.get(0), startColumn, endColumn, columnWidths, xStart, y, fontSize, lineHeight, font);
+                               usedHeight += lineHeight;
+                            } else if(config.layout.equals("tabular")) {
+                                float x = xStart;
+                                for (int col = startColumn; col < endColumn; col++) {
+                                    String header = data.get(0)[col];
+                                    float cellWidth = columnWidths[col];
+                                    float cellHeight = lineHeight;
+
+                                    content.addRect(x, y - cellHeight, cellWidth, cellHeight);
+                                    content.stroke();
+
+                                    content.beginText();
+                                    content.newLineAtOffset(x + 2, y - fontSize);
+                                    content.showText(header);
+                                    content.endText();
+
+                                    x += cellWidth;
+                               }
+                               y -= lineHeight;
+                               usedHeight += lineHeight;
+                            }
                         }
                     }
 
@@ -206,18 +244,35 @@ public class CSV2PDF {
                     for (int col = startColumn; col < endColumn; col++) {
                         if (col < row.size()) {
                             String cell = row.get(col);
-                            content.beginText();
-                            content.newLineAtOffset(x, y);
-                            content.showText(cell);
-                            content.endText();
-                            x += columnWidths[col];
+                            if(config.layout.equals("tabs")) {
+                               content.beginText();
+                               content.newLineAtOffset(x, y);
+                               content.showText(cell);
+                               content.endText();
+                               x += columnWidths[col];
+                            } else if(config.layout.equals("tabular")) {
+                               float cellWidth = columnWidths[col];
+                               float cellHeight = lineHeight;
+
+                               // Draw cell border
+                               content.addRect(x, y - cellHeight, cellWidth, cellHeight);
+                               content.stroke();
+                               
+                               // Write text inside the cell
+                               content.beginText();
+                               content.newLineAtOffset(x + 2, y - fontSize); // slight padding
+                               content.showText(cell);
+                               content.endText();
+
+                               x += cellWidth;
+                            } 
                         }
                     }
-
+                    
                     y -= lineHeight;
                     usedHeight += lineHeight;
                 }
-
+                
                 content.close();
                 startColumn = endColumn;
             }
@@ -228,8 +283,7 @@ public class CSV2PDF {
         }
     }
 
-    
-    // --- Neuer Hilfsmethode: Überschriften zeichnen ---
+    // --- Draw headers ---
     private float drawHeader(PDPageContentStream content, String[] headerRow, int startColumn, int endColumn,
                              float[] columnWidths, float xStart, float y, int fontSize, float lineHeight, PDType1Font font) throws IOException {
         float x = xStart;
@@ -249,7 +303,7 @@ public class CSV2PDF {
     }
 
     /**
-     * Prints the generated PDF file.
+     * --- Prints the generated PDF file. ---
      * @param pdfPath
      * @throws java.io.IOException
      * @throws java.awt.print.PrinterException
@@ -265,7 +319,7 @@ public class CSV2PDF {
     }
 
     /**
-     * Resolves a font name to a PDFBox font instance.
+     * --- Resolves a font name to a PDFBox font instance. ---
      */
     private PDType1Font resolveFont(String fontName) {
         return switch (fontName.toUpperCase()) {
@@ -278,7 +332,7 @@ public class CSV2PDF {
     }
 
     /**
-     * C
+     * --- Converts the CSV into PDF ---
      * @param config
      * @param allRows
      * @throws java.io.IOException
