@@ -13,6 +13,7 @@ import java.awt.print.PrinterJob;
 import java.io.FileReader;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -59,23 +60,46 @@ public class CSV2PDF {
      * @throws com.opencsv.exceptions.CsvValidationException
      */
     public List<String[]> loadCSV(PDFConfig config) throws IOException, CsvValidationException {
-    List<String[]> data = new ArrayList<>();
-
-    if (config.delimiter == null || config.delimiter.isEmpty()) {
-        config.delimiter = ",";
-    }
-
-    try (CSVReader reader = new CSVReaderBuilder(new FileReader(config.csvPath.toFile()))
-            .withCSVParser(new CSVParserBuilder().withSeparator(config.delimiter.charAt(0)).build())
-            .build()) {
-        String[] line;
-        while ((line = reader.readNext()) != null) {
-            data.add(line);
+        if (!isValidDelimiter(config.delimiter, config.csvPath)) {
+            throw new IllegalArgumentException("Invalid delimiter or CSV file.");
         }
+
+        List<String[]> data = new ArrayList<>();
+        try (CSVReader reader = new CSVReaderBuilder(new FileReader(config.csvPath.toFile()))
+                .withCSVParser(new CSVParserBuilder().withSeparator(config.delimiter.charAt(0)).build())
+                .build()) {
+            String[] line;
+            while ((line = reader.readNext()) != null) {
+                data.add(line);
+            }
+        }
+
+        return data;
     }
 
-    return data;
-}
+    
+    private static boolean isValidDelimiter(String delimiter, Path filePath) {
+        // Check if delimiter is null or empty
+        if (delimiter == null || delimiter.isEmpty()) {
+            ErrorHandler.showErrorMessage("No delimiter selected. Please choose a valid delimiter.");
+            return false;
+        }
+
+        // Optional: Check if the delimiter exists in the first line of the file
+        try {
+            String firstLine = Files.lines(filePath).findFirst().orElse("");
+            if (!firstLine.contains(delimiter)) {
+                ErrorHandler.showWarningMessage("Selected delimiter not found in the file. Please verify your choice.");
+                // You can decide if this should be a warning or return false
+                return false;
+            }
+        } catch (IOException e) {
+            ErrorHandler.showErrorMessage("Error reading the file to validate delimiter.");
+            return false;
+        }
+
+        return true;
+    }
 
     /**
      * Filters the selected rows based on user input.
