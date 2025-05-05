@@ -517,30 +517,59 @@ public class GUI extends JFrame {
     }//GEN-LAST:event_jButtonFileActionPerformed
 
     private void jButtonConvertActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonConvertActionPerformed
-        JFileChooser fileChooser = new JFileChooser();
-        FileNameExtensionFilter filter = new FileNameExtensionFilter("PDF-Dateien (*.pdf)", "pdf");
-        fileChooser.setFileFilter(filter);
-        fileChooser.setAcceptAllFileFilterUsed(false);
-
-        int result = fileChooser.showSaveDialog(null);
-
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File selectedFile = fileChooser.getSelectedFile();
-            String filePath = selectedFile.getAbsolutePath();  
-            if (!filePath.toLowerCase().endsWith(".pdf")) {
-                selectedFile = new File(filePath + ".pdf");
+        try {                                               
+            
+            if (!isValidCsvPath(config.csvPath)) {
+                ErrorHandler.showErrorMessage("Invalid file. Please select a valid CSV file.");
+                return;
             }
-            System.out.println("PDF wird gespeichert unter: " + selectedFile.getAbsolutePath());
-            config.pdfOutputPath = Paths.get(selectedFile.getAbsolutePath());
-            configurePdfSettings();
-        }
-        try {
+            
+            loadCsvAndUpdateTable();
+            
+            if (data.isEmpty()) {
+                ErrorHandler.showErrorMessage("CSV file could not be read. Check delimiter.");
+                return;
+            }
+            
+            JFileChooser fileChooser = new JFileChooser();
+            FileNameExtensionFilter filter = new FileNameExtensionFilter("PDF-Dateien (*.pdf)", "pdf");
+            fileChooser.setFileFilter(filter);
+            fileChooser.setAcceptAllFileFilterUsed(false);
+            
+            int result = fileChooser.showSaveDialog(null);
+            
+            if (result == JFileChooser.APPROVE_OPTION) {
+                File selectedFile = fileChooser.getSelectedFile();
+                String filePath = selectedFile.getAbsolutePath();
+                if (!filePath.toLowerCase().endsWith(".pdf")) {
+                    selectedFile = new File(filePath + ".pdf");
+                }
+                config.pdfOutputPath = Paths.get(selectedFile.getAbsolutePath());
+                configurePdfSettings();
+            }
+            
             generatePdf();
-        } catch (IOException e) {} catch (CsvValidationException ex) {
+            ErrorHandler.showSuccessMessage("PDF successfully created.");
+        } catch (IOException | CsvValidationException ex) {
             Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
+            ErrorHandler.showErrorMessage("An error occurred while converting the CSV.");
         }
     }//GEN-LAST:event_jButtonConvertActionPerformed
 
+    private boolean isValidCsvPath(Path filePath) {
+        // Check if the file exists
+        if (!Files.exists(filePath)) {
+            return false; // File doesn't exist
+        }
+
+        // Check if the file ends with .csv extension
+        if (!filePath.toString().toLowerCase().endsWith(".csv")) {
+            return false; // Invalid file extension
+        }
+
+        return true; // File exists and has a valid .csv extension
+    }
+    
     private void loadCsvAndUpdateTable() {
         try {
             loadConfig();
@@ -553,6 +582,7 @@ public class GUI extends JFrame {
     }
     
     private void updateTableModel() {
+        
         tableModel = new DefaultTableModel() {
             @Override
             public Class<?> getColumnClass(int columnIndex) {
@@ -587,6 +617,8 @@ public class GUI extends JFrame {
     }
     
     private void configurePdfSettings() {
+        
+        
         ComboItem item = (ComboItem) jComboBoxDelimeter.getSelectedItem();
         config.delimiter = jTextFieldOther.getText().isBlank() ? item.getDelimiter() : jTextFieldOther.getText();
 
@@ -610,25 +642,8 @@ public class GUI extends JFrame {
         config.selectedRows = selectedRows;
     }
     
-    private void generatePdf() throws IOException, CsvValidationException {
-        if(isValidCsv(config.csvPath)) {
-            service.convert(config, data);
-        } else {
-        }
-    }
-    
-    private boolean isValidCsv(Path filePath) {
-        // Check if the file exists
-        if (!Files.exists(filePath)) {
-            return false; // File doesn't exist
-        }
-
-        // Check if the file ends with .csv extension
-        if (!filePath.toString().toLowerCase().endsWith(".csv")) {
-            return false; // Invalid file extension
-        }
-
-        return true; // File exists and has a valid .csv extension
+    private void generatePdf() throws IOException, CsvValidationException {      
+        service.convert(config, data);
     }
     
     private void loadConfig() {
@@ -645,7 +660,7 @@ public class GUI extends JFrame {
     }//GEN-LAST:event_jRadioButtonTabsActionPerformed
 
     private void jComboBoxDelimeterActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jComboBoxDelimeterActionPerformed
-        // TODO add your handling code here:
+       loadCsvAndUpdateTable();
     }//GEN-LAST:event_jComboBoxDelimeterActionPerformed
 
     private void jRadioButtonVerticalActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jRadioButtonVerticalActionPerformed
