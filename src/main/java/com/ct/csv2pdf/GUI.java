@@ -23,7 +23,6 @@ import javax.swing.DefaultComboBoxModel;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
-import javax.swing.JOptionPane;
 import javax.swing.TransferHandler;
 import javax.swing.UIManager;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -612,12 +611,24 @@ public class GUI extends JFrame {
     }
     
     private void generatePdf() throws IOException, CsvValidationException {
-        if (config.csvPath != null) {
+        if(isValidCsv(config.csvPath)) {
             service.convert(config, data);
-            JOptionPane.showMessageDialog(this, "PDF successfully created.");
         } else {
-            JOptionPane.showMessageDialog(this, "Pfad nicht gefunden.");
         }
+    }
+    
+    private boolean isValidCsv(Path filePath) {
+        // Check if the file exists
+        if (!Files.exists(filePath)) {
+            return false; // File doesn't exist
+        }
+
+        // Check if the file ends with .csv extension
+        if (!filePath.toString().toLowerCase().endsWith(".csv")) {
+            return false; // Invalid file extension
+        }
+
+        return true; // File exists and has a valid .csv extension
     }
     
     private void loadConfig() {
