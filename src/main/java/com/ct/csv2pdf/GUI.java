@@ -559,7 +559,7 @@ public class GUI extends JFrame {
 
         config.isLandscape = jRadioButtonHorizontal.isSelected();
         config.isCentered = jCheckBoxCentered.isSelected();
-        config.thr = jCheckBoxThr.isSelected();
+        config.repeatHeader = jCheckBoxThr.isSelected();
         
         List<Integer> selectedRows = new ArrayList<>();
         for(int row = 0; row < jTable1.getRowCount(); row++) {
@@ -578,7 +578,9 @@ public class GUI extends JFrame {
             } else {
                 JOptionPane.showMessageDialog(this, "Pfad nicht gefunden.");
             }
-        } catch (CsvValidationException | IOException e) {}
+        } catch (IOException e) {} catch (CsvValidationException ex) {
+            Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }//GEN-LAST:event_jButtonConvertActionPerformed
 
     private void loadConfig() {
@@ -662,7 +664,7 @@ public class GUI extends JFrame {
 
         config.isLandscape = jRadioButtonHorizontal.isSelected();
         config.isCentered = jCheckBoxCentered.isSelected();
-        config.thr = jCheckBoxThr.isSelected();
+        config.repeatHeader = jCheckBoxThr.isSelected();
         
         List<Integer> selectedRows = new ArrayList<>();
         for(int row = 0; row < jTable1.getRowCount(); row++) {
@@ -676,10 +678,14 @@ public class GUI extends JFrame {
 
         try {
             if(config.csvPath != null) {
-                service.convert(config, data);  
+                try {  
+                    service.convert(config, data);
+                } catch (CsvValidationException ex) {
+                    Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
+                }
                 
             }
-        } catch (CsvValidationException | IOException e) {}
+        } catch (IOException e) {}
         
         try {
             service.printPDF(config.pdfOutputPath);
