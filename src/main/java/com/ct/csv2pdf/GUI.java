@@ -12,6 +12,8 @@ import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.print.PrinterException;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -73,11 +75,7 @@ public class GUI extends JFrame {
                 Transferable t = support.getTransferable();
                 List<File> files = (List<File>) t.getTransferData(DataFlavor.javaFileListFlavor);
                 jTextFieldFilename.setText(files.get(0).getAbsolutePath());
-                try {
-                    insertCsv();
-                } catch (CsvValidationException ex) {
-                    Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
-                }
+                loadCsvAndUpdateTable();
                 return true;
             } catch (UnsupportedFlavorException | IOException e) {
                 return false;
@@ -507,7 +505,6 @@ public class GUI extends JFrame {
 
     private void jButtonFileActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonFileActionPerformed
         JFileChooser fileChooser = new JFileChooser();
-        
         FileNameExtensionFilter filter = new FileNameExtensionFilter("CSV-Dateien (*.csv)", "csv");
         fileChooser.setFileFilter(filter);
         
@@ -516,19 +513,12 @@ public class GUI extends JFrame {
         if(response == JFileChooser.APPROVE_OPTION) {
             path = fileChooser.getSelectedFile().getAbsolutePath();
             jTextFieldFilename.setText(path);
-            try {  
-                insertCsv();
-            } catch (IOException | CsvValidationException ex) {
-                Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
-            }
+            loadCsvAndUpdateTable();
         }
     }//GEN-LAST:event_jButtonFileActionPerformed
 
     private void jButtonConvertActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonConvertActionPerformed
-
-        
         JFileChooser fileChooser = new JFileChooser();
-        
         FileNameExtensionFilter filter = new FileNameExtensionFilter("PDF-Dateien (*.pdf)", "pdf");
         fileChooser.setFileFilter(filter);
         fileChooser.setAcceptAllFileFilterUsed(false);
@@ -537,68 +527,33 @@ public class GUI extends JFrame {
 
         if (result == JFileChooser.APPROVE_OPTION) {
             File selectedFile = fileChooser.getSelectedFile();
-            String filePath = selectedFile.getAbsolutePath();
-
-            
+            String filePath = selectedFile.getAbsolutePath();  
             if (!filePath.toLowerCase().endsWith(".pdf")) {
                 selectedFile = new File(filePath + ".pdf");
             }
-
             System.out.println("PDF wird gespeichert unter: " + selectedFile.getAbsolutePath());
             config.pdfOutputPath = Paths.get(selectedFile.getAbsolutePath());
-            
+            configurePdfSettings();
         }
-
-        ComboItem item = (ComboItem) jComboBoxDelimeter.getSelectedItem();
-        config.delimiter = jTextFieldOther.getText().isBlank() ? item.getDelimiter() : jTextFieldOther.getText();
-        
-        config.layout = jRadioButtonTabs.isSelected() ? "tabs" : "tabular";
-
-        config.fontName = jComboBoxFontName.getSelectedItem().toString();
-        config.fontSize = (int) jSpinnerFontSize.getValue();
-
-        config.isLandscape = jRadioButtonHorizontal.isSelected();
-        config.isCentered = jCheckBoxCentered.isSelected();
-        config.repeatHeader = jCheckBoxThr.isSelected();
-        
-        List<Integer> selectedRows = new ArrayList<>();
-        for(int row = 0; row < jTable1.getRowCount(); row++) {
-            boolean isSelected = (boolean) jTable1.getValueAt(row, 0);
-            if(isSelected) {
-                selectedRows.add(row);
-            }
-        }
-        
-        config.selectedRows = selectedRows;
-
         try {
-            if(config.csvPath != null) {
-                service.convert(config, data);  
-                JOptionPane.showMessageDialog(this, "PDF successfully created.");
-            } else {
-                JOptionPane.showMessageDialog(this, "Pfad nicht gefunden.");
-            }
+            generatePdf();
         } catch (IOException e) {} catch (CsvValidationException ex) {
             Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
         }
     }//GEN-LAST:event_jButtonConvertActionPerformed
 
-    private void loadConfig() {
-        service = new CSV2PDF();
-
-        // Beispiel-Konfiguration
-        config = new CSV2PDF.PDFConfig();
-        config.csvPath = Paths.get(jTextFieldFilename.getText()); // Ersetze durch deinen CSV-Pfad
-
-        // Delimeter
-        ComboItem item = (ComboItem) jComboBoxDelimeter.getSelectedItem();
-        config.delimiter = jTextFieldOther.getText().isBlank() ? item.getDelimiter() : jTextFieldOther.getText();
+    private void loadCsvAndUpdateTable() {
+        try {
+            loadConfig();
+            data = service.loadCSV(config);
+            updateTableModel();
+            showCsvCardLayout();
+        } catch (IOException | CsvValidationException ex) {
+            Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
     
-    private void insertCsv() throws IOException, CsvValidationException {
-        loadConfig();
-        data = service.loadCSV(config);
-        
+    private void updateTableModel() {
         tableModel = new DefaultTableModel() {
             @Override
             public Class<?> getColumnClass(int columnIndex) {
@@ -610,8 +565,8 @@ public class GUI extends JFrame {
                 return column == 0; // Only checkbox editable
             }
         };
-        jTable1.setModel(tableModel);
 
+        jTable1.setModel(tableModel);
         String[] headers = data.get(0);
         String[] headersWithCheckbox = new String[headers.length + 1];
         headersWithCheckbox[0] = "Select";
@@ -625,10 +580,54 @@ public class GUI extends JFrame {
             System.arraycopy(row, 0, newRow, 1, row.length);
             tableModel.addRow(newRow);
         }
-
+    }
+    
+    private void showCsvCardLayout() {
         CardLayout layout = (CardLayout) jPanel10.getLayout();
         layout.show(jPanel10, "card2");
     }
+    
+    private void configurePdfSettings() {
+        ComboItem item = (ComboItem) jComboBoxDelimeter.getSelectedItem();
+        config.delimiter = jTextFieldOther.getText().isBlank() ? item.getDelimiter() : jTextFieldOther.getText();
+
+        config.layout = jRadioButtonTabs.isSelected() ? "tabs" : "tabular";
+        config.fontName = jComboBoxFontName.getSelectedItem().toString();
+        config.fontSize = (int) jSpinnerFontSize.getValue();
+        config.isLandscape = jRadioButtonHorizontal.isSelected();
+        config.isCentered = jCheckBoxCentered.isSelected();
+        config.repeatHeader = jCheckBoxThr.isSelected();
+        updateSelectedRows();
+    }
+    
+    private void updateSelectedRows() {
+        List<Integer> selectedRows = new ArrayList<>();
+        for (int row = 0; row < jTable1.getRowCount(); row++) {
+            boolean isSelected = (boolean) jTable1.getValueAt(row, 0);
+            if (isSelected) {
+                selectedRows.add(row);
+            }
+        }
+        config.selectedRows = selectedRows;
+    }
+    
+    private void generatePdf() throws IOException, CsvValidationException {
+        if (config.csvPath != null) {
+            service.convert(config, data);
+            JOptionPane.showMessageDialog(this, "PDF successfully created.");
+        } else {
+            JOptionPane.showMessageDialog(this, "Pfad nicht gefunden.");
+        }
+    }
+    
+    private void loadConfig() {
+        service = new CSV2PDF();
+        config = new CSV2PDF.PDFConfig();
+        config.csvPath = Paths.get(jTextFieldFilename.getText());
+        ComboItem item = (ComboItem) jComboBoxDelimeter.getSelectedItem();
+        config.delimiter = jTextFieldOther.getText().isBlank() ? item.getDelimiter() : jTextFieldOther.getText();
+    }
+    
     
     private void jRadioButtonTabsActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jRadioButtonTabsActionPerformed
         // TODO add your handling code here:
@@ -654,43 +653,34 @@ public class GUI extends JFrame {
     }//GEN-LAST:event_jButtonSelectAllActionPerformed
 
     private void jButtonPrintActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonPrintActionPerformed
-        config.pdfOutputPath = Paths.get("C:/Users/Cem/Desktop/test.pdf");
+        Path tempFilePath = null;
         
-        ComboItem item = (ComboItem) jComboBoxDelimeter.getSelectedItem();
-        config.delimiter = jTextFieldOther.getText().isBlank() ? item.getDelimiter() : jTextFieldOther.getText();       
+        try {                                             
+            tempFilePath = Files.createTempFile("pdf_output_", ".pdf"); 
+            config.pdfOutputPath = tempFilePath; // Set the config to point to the temp file
         
-        config.fontName = jComboBoxFontName.getSelectedItem().toString();
-        config.fontSize = (int) jSpinnerFontSize.getValue();
-
-        config.isLandscape = jRadioButtonHorizontal.isSelected();
-        config.isCentered = jCheckBoxCentered.isSelected();
-        config.repeatHeader = jCheckBoxThr.isSelected();
-        
-        List<Integer> selectedRows = new ArrayList<>();
-        for(int row = 0; row < jTable1.getRowCount(); row++) {
-            boolean isSelected = (boolean) jTable1.getValueAt(row, 0);
-            if(isSelected) {
-                selectedRows.add(row);
+            configurePdfSettings();
+            
+            if (config.csvPath != null) {
+                service.convert(config, data);
             }
-        }
-        
-        config.selectedRows = selectedRows;
-
-        try {
-            if(config.csvPath != null) {
-                try {  
-                    service.convert(config, data);
-                } catch (CsvValidationException ex) {
-                    Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
-                }
-                
+            
+            try {
+                service.printPDF(config.pdfOutputPath);
+            } catch (IOException | PrinterException ex) {
+                Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
             }
-        } catch (IOException e) {}
-        
-        try {
-            service.printPDF(config.pdfOutputPath);
-        } catch (IOException | PrinterException ex) {
+        } catch (IOException | CsvValidationException ex) {
             Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            // Optionally, delete the temporary file after printing (if no longer needed)
+            if (tempFilePath != null) {
+                try {
+                    Files.delete(tempFilePath);
+                } catch (IOException e) {
+                    Logger.getLogger(GUI.class.getName()).log(Level.SEVERE, "Failed to delete temp file", e);
+                }
+            }
         }
     }//GEN-LAST:event_jButtonPrintActionPerformed
 
