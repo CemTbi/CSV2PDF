@@ -47,7 +47,7 @@ public class CSV2PDF {
         public List<Integer> selectedRows = new ArrayList<>();
         public String layout = "tabs"; // or "tabular", "list", "tabs".
         public boolean isCentered = false;
-        public boolean thr = false;
+        public boolean repeatHeader = false;
         public boolean isLandscape = false;
     }
 
@@ -177,7 +177,7 @@ public class CSV2PDF {
                 if(config.layout.equals("tabs")) {
                     y = drawHeader(content, data.get(0), startColumn, endColumn, columnWidths, xStart, y, fontSize, lineHeight, font);
                     usedHeight += lineHeight;
-                } else if(config.layout.equals("tabular")) {
+                } else {
                     float x = xStart;
                     for (int col = startColumn; col < endColumn; col++) {
                         String header = data.get(0)[col];
@@ -196,9 +196,7 @@ public class CSV2PDF {
                     }
                     y -= lineHeight;
                     usedHeight += lineHeight;
-                }
-                
-                
+                }  
 
                 for (int rowIndex = 1; rowIndex < rows.size(); rowIndex++) {
                     List<String> row = rows.get(rowIndex);
@@ -213,11 +211,11 @@ public class CSV2PDF {
                         y = yStart;
                         usedHeight = 0;
 
-                        if (config.thr) {
+                        if (config.repeatHeader) {
                             if(config.layout.equals("tabs")) {
                                y = drawHeader(content, data.get(0), startColumn, endColumn, columnWidths, xStart, y, fontSize, lineHeight, font);
                                usedHeight += lineHeight;
-                            } else if(config.layout.equals("tabular")) {
+                            } else {
                                 float x = xStart;
                                 for (int col = startColumn; col < endColumn; col++) {
                                     String header = data.get(0)[col];
@@ -250,7 +248,7 @@ public class CSV2PDF {
                                content.showText(cell);
                                content.endText();
                                x += columnWidths[col];
-                            } else if(config.layout.equals("tabular")) {
+                            } else {
                                float cellWidth = columnWidths[col];
                                float cellHeight = lineHeight;
 
