@@ -113,7 +113,6 @@ public class GUI extends JFrame {
         jPanel4 = new javax.swing.JPanel();
         jRadioButtonTabular = new javax.swing.JRadioButton();
         jRadioButtonTabs = new javax.swing.JRadioButton();
-        jRadioButtonList = new javax.swing.JRadioButton();
         jPanel6 = new javax.swing.JPanel();
         jComboBoxFontName = new javax.swing.JComboBox<>();
         jLabel5 = new javax.swing.JLabel();
@@ -269,7 +268,7 @@ public class GUI extends JFrame {
         jRadioButtonTabular.setText("Tabular");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 0;
+        gridBagConstraints.gridy = 1;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_START;
         gridBagConstraints.weightx = 1.0;
         jPanel4.add(jRadioButtonTabular, gridBagConstraints);
@@ -284,19 +283,10 @@ public class GUI extends JFrame {
         });
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 1;
+        gridBagConstraints.gridy = 0;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_START;
         gridBagConstraints.weightx = 1.0;
         jPanel4.add(jRadioButtonTabs, gridBagConstraints);
-
-        buttonGroup1.add(jRadioButtonList);
-        jRadioButtonList.setText("List");
-        gridBagConstraints = new java.awt.GridBagConstraints();
-        gridBagConstraints.gridx = 0;
-        gridBagConstraints.gridy = 2;
-        gridBagConstraints.anchor = java.awt.GridBagConstraints.LINE_START;
-        gridBagConstraints.weightx = 1.0;
-        jPanel4.add(jRadioButtonList, gridBagConstraints);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
@@ -535,14 +525,34 @@ public class GUI extends JFrame {
     }//GEN-LAST:event_jButtonFileActionPerformed
 
     private void jButtonConvertActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButtonConvertActionPerformed
+
         
-        config.pdfOutputPath = Paths.get("C:/Users/Cem/Desktop/test.pdf"); // Zielpfad für PDF
+        JFileChooser fileChooser = new JFileChooser();
+        
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("PDF-Dateien (*.pdf)", "pdf");
+        fileChooser.setFileFilter(filter);
+        fileChooser.setAcceptAllFileFilterUsed(false);
+
+        int result = fileChooser.showSaveDialog(null);
+
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = fileChooser.getSelectedFile();
+            String filePath = selectedFile.getAbsolutePath();
+
+            
+            if (!filePath.toLowerCase().endsWith(".pdf")) {
+                selectedFile = new File(filePath + ".pdf");
+            }
+
+            System.out.println("PDF wird gespeichert unter: " + selectedFile.getAbsolutePath());
+            config.pdfOutputPath = Paths.get(selectedFile.getAbsolutePath());
+            
+        }
 
         ComboItem item = (ComboItem) jComboBoxDelimeter.getSelectedItem();
         config.delimiter = jTextFieldOther.getText().isBlank() ? item.getDelimiter() : jTextFieldOther.getText();
         
-        config.layout = jRadioButtonTabs.isSelected() ? "tabs" : 
-                        (jRadioButtonTabular.isSelected() ? "tabular" : "list");
+        config.layout = jRadioButtonTabs.isSelected() ? "tabs" : "tabular";
 
         config.fontName = jComboBoxFontName.getSelectedItem().toString();
         config.fontSize = (int) jSpinnerFontSize.getValue();
@@ -743,7 +753,6 @@ public class GUI extends JFrame {
     private javax.swing.JPanel jPanel8;
     private javax.swing.JPanel jPanel9;
     private javax.swing.JRadioButton jRadioButtonHorizontal;
-    private javax.swing.JRadioButton jRadioButtonList;
     private javax.swing.JRadioButton jRadioButtonTabs;
     private javax.swing.JRadioButton jRadioButtonTabular;
     private javax.swing.JRadioButton jRadioButtonVertical;
