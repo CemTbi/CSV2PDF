@@ -4,9 +4,6 @@
  */
 package com.ct.csv2pdf;
 
-import java.awt.Component;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.JOptionPane;
 
 /**
@@ -14,23 +11,19 @@ import javax.swing.JOptionPane;
  * @author Cem
  */
 public class ErrorHandler {
-    // Shows an Error
-    public static void showUserErrorMessage(Component parent, String message) {
-        JOptionPane.showMessageDialog(parent, message, "Error", JOptionPane.ERROR_MESSAGE);
+    
+    // Method to show success messages
+    public static void showSuccessMessage(String message) {
+        JOptionPane.showMessageDialog(null, message, "Success", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    // Shows success
-    public static void showUserSuccessMessage(Component parent, String message) {
-        JOptionPane.showMessageDialog(parent, message, "Success", JOptionPane.INFORMATION_MESSAGE);
+    // Method to show error messages
+    public static void showErrorMessage(String message) {
+        JOptionPane.showMessageDialog(null, message, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
-    // Protocol of errors for the dev
-    public static void logError(Exception ex, String message) {
-        Logger.getLogger(ErrorHandler.class.getName()).log(Level.SEVERE, message, ex);
-    }
-
-    // Shows warning
-    public static void showUserWarningMessage(Component parent, String message) {
-        JOptionPane.showMessageDialog(parent, message, "Warning", JOptionPane.WARNING_MESSAGE);
+    // Method to show warnings
+    public static void showWarningMessage(String message) {
+        JOptionPane.showMessageDialog(null, message, "Warning", JOptionPane.WARNING_MESSAGE);
     }
 }
