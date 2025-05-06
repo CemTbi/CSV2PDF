@@ -524,7 +524,8 @@ public class GUI extends JFrame {
                 return;
             }
             
-            loadCsvAndUpdateTable();
+            loadConfig();
+            data = service.loadCSV(config);
             
             if (data.isEmpty()) {
                 ErrorHandler.showErrorMessage("CSV file could not be read. Check delimiter.");
