@@ -21,6 +21,10 @@ CSV2PDF is a desktop application built with Java Swing that allows users to conv
 - **Direct PDF Generation and Printing**:
     - Convert and save the customized table as a PDF file.
     - Print the generated PDF directly from the application.
+  
+**Preview:**
+
+<img src="images/preview.png">
 
 ## Getting Started
 
