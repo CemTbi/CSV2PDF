@@ -26,3 +26,8 @@ replay_pid*
 # NetBeans
 nb-configuration.xml
 nbactions.xml
+
+# Local
+.idea/
+*.iml
+/target
