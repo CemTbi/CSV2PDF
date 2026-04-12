@@ -26,7 +26,7 @@ CSV2PDF is a desktop application built with Java Swing that allows users to conv
 
 ### Prerequisites
 
-- Java Development Kit (JDK 22 or later)
+- Java Development Kit (JDK 17 or later)
 - Apache Maven
 
 ### Installation and Running
