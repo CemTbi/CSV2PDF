@@ -26,6 +26,10 @@ CSV2PDF is a desktop application built with Java Swing that allows users to conv
 
 <img src="images/preview.png">
 
+## Background
+
+This project was built as a personal learning exercise to get hands-on experience with Java Swing and GUI development in Java. It is now open-sourced in the hope that others might find it useful or learn from it as well.
+
 ## Getting Started
 
 ### Prerequisites
