@@ -1,5 +1,4 @@
 # CSV2PDF
-[![Ask DeepWiki](https://devin.ai/assets/askdeepwiki.png)](https://deepwiki.com/CemTbi/CSV2PDF)
 
 CSV2PDF is a desktop application built with Java Swing that allows users to convert CSV (Comma-Separated Values) files into formatted PDF documents. It provides a graphical user interface to load CSV files, preview their content, and customize the layout of the output PDF.
 
